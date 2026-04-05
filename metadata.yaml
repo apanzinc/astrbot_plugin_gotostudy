@@ -1,0 +1,24 @@
+name: astrbot_plugin_gotostudy
+# 插件唯一识别名，必须小写，用下划线分隔
+
+display_name: 去学习！
+# 用于展示的名字
+
+desc: 当指定QQ用户发送消息时，自动发送学习提醒。支持通过命令管理目标用户和回复内容。
+# 插件简短描述
+
+version: v1.0.0
+# 插件版本号
+
+author: apanzinc
+# 作者
+
+repo: https://github.com/apanzinc/GotoStudy
+# 插件的仓库地址
+
+support_platforms:
+  - aiocqhttp
+# 支持的消息平台
+
+dependencies:
+# 额外的依赖库（如有需要可以在这里添加）
