@@ -158,6 +158,7 @@ class GotoStudy(Star):
         """去学习插件管理命令"""
         pass
 
+    @filter.permission_type(filter.PermissionType.ADMIN)
     @gotostudy.command("add")
     async def add_target(self, event: AstrMessageEvent, qq: str):
         """添加目标QQ号
@@ -182,6 +183,7 @@ class GotoStudy(Star):
             logger.error(f"[GotoStudy] 添加目标失败: {e}")
             yield event.plain_result(f"❌ 添加失败: {str(e)}")
 
+    @filter.permission_type(filter.PermissionType.ADMIN)
     @gotostudy.command("remove")
     async def remove_target(self, event: AstrMessageEvent, qq: str):
         """移除目标QQ号
@@ -203,6 +205,7 @@ class GotoStudy(Star):
             logger.error(f"[GotoStudy] 移除目标失败: {e}")
             yield event.plain_result(f"❌ 移除失败: {str(e)}")
 
+    @filter.permission_type(filter.PermissionType.ADMIN)
     @gotostudy.command("list")
     async def list_targets(self, event: AstrMessageEvent):
         """列出所有目标QQ号
@@ -234,6 +237,7 @@ class GotoStudy(Star):
 
         yield event.plain_result(msg)
 
+    @filter.permission_type(filter.PermissionType.ADMIN)
     @gotostudy.command("setmsg")
     async def set_message(self, event: AstrMessageEvent, *, message: str):
         """设置回复消息内容
@@ -251,6 +255,7 @@ class GotoStudy(Star):
             logger.error(f"[GotoStudy] 设置消息失败: {e}")
             yield event.plain_result(f"❌ 设置失败: {str(e)}")
 
+    @filter.permission_type(filter.PermissionType.ADMIN)
     @gotostudy.command("setcd")
     async def set_cooldown(self, event: AstrMessageEvent, seconds: int):
         """设置冷却时间（秒）
@@ -276,6 +281,7 @@ class GotoStudy(Star):
             logger.error(f"[GotoStudy] 设置冷却时间失败: {e}")
             yield event.plain_result(f"❌ 设置失败: {str(e)}")
 
+    @filter.permission_type(filter.PermissionType.ADMIN)
     @gotostudy.command("on")
     async def enable_plugin(self, event: AstrMessageEvent):
         """启用插件
@@ -284,6 +290,7 @@ class GotoStudy(Star):
         self._set_config("enabled", True)
         yield event.plain_result("✅ 插件已启用！")
 
+    @filter.permission_type(filter.PermissionType.ADMIN)
     @gotostudy.command("off")
     async def disable_plugin(self, event: AstrMessageEvent):
         """禁用插件
@@ -292,6 +299,7 @@ class GotoStudy(Star):
         self._set_config("enabled", False)
         yield event.plain_result("✅ 插件已禁用！")
 
+    @filter.permission_type(filter.PermissionType.ADMIN)
     @gotostudy.command("addgroup")
     async def add_group(self, event: AstrMessageEvent, group_id: str):
         """添加群白名单
@@ -316,6 +324,7 @@ class GotoStudy(Star):
             logger.error(f"[GotoStudy] 添加群白名单失败: {e}")
             yield event.plain_result(f"❌ 添加失败: {str(e)}")
 
+    @filter.permission_type(filter.PermissionType.ADMIN)
     @gotostudy.command("removegroup")
     async def remove_group(self, event: AstrMessageEvent, group_id: str):
         """移除群白名单
@@ -337,6 +346,7 @@ class GotoStudy(Star):
             logger.error(f"[GotoStudy] 移除群白名单失败: {e}")
             yield event.plain_result(f"❌ 移除失败: {str(e)}")
 
+    @filter.permission_type(filter.PermissionType.ADMIN)
     @gotostudy.command("clear")
     async def clear_groups(self, event: AstrMessageEvent):
         """清空群白名单（在所有群生效）
@@ -349,39 +359,20 @@ class GotoStudy(Star):
             logger.error(f"[GotoStudy] 清空群白名单失败: {e}")
             yield event.plain_result(f"❌ 清空失败: {str(e)}")
 
+    @filter.permission_type(filter.PermissionType.ADMIN)
     @gotostudy.command("help")
     async def show_help(self, event: AstrMessageEvent):
         """显示帮助信息
         用法: /gotostudy help
         """
-        help_text = """📖 GotoStudy 插件使用帮助
+        help_text = """📖 GotoStudy 命令列表
 
-【目标用户管理】
-  /gotostudy add <QQ号>       - 添加目标QQ号
-  /gotostudy remove <QQ号>    - 移除目标QQ号
+用户管理: add/remove
+群管理: addgroup/removegroup/clear
+配置: list/setmsg/setcd/on/off
 
-【群白名单管理】
-  /gotostudy addgroup <群号>  - 添加群白名单
-  /gotostudy removegroup <群号> - 移除群白名单
-  /gotostudy clear            - 清空群白名单（在所有群生效）
-  💡 说明: 白名单为空时，插件在所有群生效；有值时只在指定群生效
-
-【其他命令】
-  /gotostudy list             - 查看配置列表
-  /gotostudy setmsg <消息>    - 设置回复消息内容
-  /gotostudy setcd <秒数>     - 设置冷却时间（默认300秒=5分钟）
-  /gotostudy on               - 启用插件
-  /gotostudy off              - 禁用插件
-  /gotostudy help             - 显示此帮助
-
-【配置方式】
-  1. WebUI: 插件设置页面可视化配置
-  2. 命令: 使用上述命令在聊天中配置
-
-【示例】
-  /gotostudy add 114514
-  /gotostudy addgroup 123456789
-  /gotostudy setmsg 滚去学习！
-  /gotostudy setcd 600        # 设置10分钟冷却
-"""
+示例:
+/gotostudy add 114514
+/gotostudy setcd 300
+/gotostudy setmsg 去学习！"""
         yield event.plain_result(help_text)
