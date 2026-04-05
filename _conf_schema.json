@@ -17,6 +17,12 @@
     "hint": "当目标用户发消息时，机器人会回复这条消息",
     "default": "去学习！"
   },
+  "cooldown_seconds": {
+    "description": "冷却时间（秒）",
+    "type": "int",
+    "hint": "同一用户触发后，需要等待多少秒才能再次触发，防止刷屏",
+    "default": 300
+  },
   "enabled": {
     "description": "是否启用插件",
     "type": "bool",

@@ -1,5 +1,6 @@
 import json
 import os
+import time
 from typing import List, Dict, Any
 
 from astrbot.api.event import filter, AstrMessageEvent
@@ -19,6 +20,9 @@ class GotoStudy(Star):
             self.config = dict(config)  # AstrBotConfig 继承自 Dict
         else:
             self.config = self._load_local_config()
+
+        # 冷却时间记录：{user_id: last_trigger_time}
+        self.cooldown_records = {}
 
     def _get_config(self, key: str, default=None):
         """获取配置值"""
@@ -45,6 +49,7 @@ class GotoStudy(Star):
             "target_qqs": [],
             "group_whitelist": [],
             "reply_message": "去学习！",
+            "cooldown_seconds": 300,  # 默认5分钟冷却
             "enabled": True
         }
 
@@ -74,6 +79,43 @@ class GotoStudy(Star):
         except Exception as e:
             logger.error(f"[GotoStudy] 保存本地配置失败: {e}")
 
+    def _check_cooldown(self, user_id: str) -> bool:
+        """检查用户是否处于冷却期
+        
+        Args:
+            user_id: 用户QQ号
+            
+        Returns:
+            True: 可以触发（不在冷却期或冷却已结束）
+            False: 处于冷却期
+        """
+        cooldown_seconds = self._get_config("cooldown_seconds", 300)
+        current_time = time.time()
+        
+        if user_id in self.cooldown_records:
+            last_trigger_time = self.cooldown_records[user_id]
+            elapsed = current_time - last_trigger_time
+            if elapsed < cooldown_seconds:
+                # 还在冷却期内
+                remaining = cooldown_seconds - elapsed
+                logger.debug(f"[GotoStudy] 用户 {user_id} 处于冷却期，还需 {remaining:.1f} 秒")
+                return False
+        
+        # 更新触发时间
+        self.cooldown_records[user_id] = current_time
+        return True
+
+    def _get_cooldown_remaining(self, user_id: str) -> int:
+        """获取用户剩余冷却时间（秒）"""
+        if user_id not in self.cooldown_records:
+            return 0
+        
+        cooldown_seconds = self._get_config("cooldown_seconds", 300)
+        elapsed = time.time() - self.cooldown_records[user_id]
+        remaining = cooldown_seconds - elapsed
+        
+        return max(0, int(remaining))
+
     @filter.event_message_type(filter.EventMessageType.ALL)
     async def on_message(self, event: AstrMessageEvent):
         """监听所有消息事件"""
@@ -100,6 +142,12 @@ class GotoStudy(Star):
             # 白名单不为空，只在指定群中生效
             if not group_id or group_id not in group_whitelist:
                 return
+
+        # 检查冷却时间
+        if not self._check_cooldown(sender_id):
+            remaining = self._get_cooldown_remaining(sender_id)
+            logger.debug(f"[GotoStudy] 用户 {sender_id} 在冷却期内，跳过回复（还剩 {remaining} 秒）")
+            return
 
         # 发送回复
         reply_msg = self._get_config("reply_message", "去学习！")
@@ -163,6 +211,7 @@ class GotoStudy(Star):
         target_qqs = self._get_config("target_qqs", [])
         group_whitelist = self._get_config("group_whitelist", [])
         reply_msg = self._get_config("reply_message", "去学习！")
+        cooldown_seconds = self._get_config("cooldown_seconds", 300)
         enabled = self._get_config("enabled", True)
 
         if not target_qqs:
@@ -180,6 +229,7 @@ class GotoStudy(Star):
                 msg += f"  {i}. {group}\n"
 
         msg += f"\n💬 回复内容: {reply_msg}"
+        msg += f"\n⏱️ 冷却时间: {cooldown_seconds}秒"
         msg += f"\n🔘 插件状态: {'启用' if enabled else '禁用'}"
 
         yield event.plain_result(msg)
@@ -199,6 +249,31 @@ class GotoStudy(Star):
             yield event.plain_result(f"✅ 回复消息已设置为: {message.strip()}")
         except Exception as e:
             logger.error(f"[GotoStudy] 设置消息失败: {e}")
+            yield event.plain_result(f"❌ 设置失败: {str(e)}")
+
+    @gotostudy.command("setcd")
+    async def set_cooldown(self, event: AstrMessageEvent, seconds: int):
+        """设置冷却时间（秒）
+        用法: /gotostudy setcd 300
+        """
+        try:
+            if seconds < 0:
+                yield event.plain_result("❌ 冷却时间不能为负数！")
+                return
+            
+            if seconds < 10:
+                yield event.plain_result("⚠️ 冷却时间建议不少于10秒，防止刷屏")
+
+            self._set_config("cooldown_seconds", seconds)
+            
+            # 转换为分钟显示
+            if seconds >= 60:
+                minutes = seconds / 60
+                yield event.plain_result(f"✅ 冷却时间已设置为: {seconds}秒（{minutes:.1f}分钟）")
+            else:
+                yield event.plain_result(f"✅ 冷却时间已设置为: {seconds}秒")
+        except Exception as e:
+            logger.error(f"[GotoStudy] 设置冷却时间失败: {e}")
             yield event.plain_result(f"❌ 设置失败: {str(e)}")
 
     @gotostudy.command("on")
@@ -294,6 +369,7 @@ class GotoStudy(Star):
 【其他命令】
   /gotostudy list             - 查看配置列表
   /gotostudy setmsg <消息>    - 设置回复消息内容
+  /gotostudy setcd <秒数>     - 设置冷却时间（默认300秒=5分钟）
   /gotostudy on               - 启用插件
   /gotostudy off              - 禁用插件
   /gotostudy help             - 显示此帮助
@@ -306,5 +382,6 @@ class GotoStudy(Star):
   /gotostudy add 114514
   /gotostudy addgroup 123456789
   /gotostudy setmsg 滚去学习！
+  /gotostudy setcd 600        # 设置10分钟冷却
 """
         yield event.plain_result(help_text)
